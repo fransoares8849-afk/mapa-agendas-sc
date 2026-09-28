@@ -1052,7 +1052,7 @@ function renderComparativo() {
     ]},
     options: {
       responsive:true, maintainAspectRatio:false,
-      layout: { padding: { top: 20, bottom: 4, left: 4, right: 42 } },
+      layout: { padding: { top: 26, bottom: 4, left: 4, right: 42 } },
       interaction: { mode:'index', intersect:false },
       plugins: {
         legend: { display:false },
@@ -1063,24 +1063,30 @@ function renderComparativo() {
         x: { grid:{display:false}, ticks:{display:false} },
       },
     },
-    // rótulo apenas no último ponto de cada série (o "número" que o board vai levar) -
-    // evita poluir a linha inteira com um valor em cada mês
+    // rótulo de % em cada mês, nas duas séries - quando os dois pontos ficam muito
+    // próximos verticalmente (linhas quase coladas), separa um acima e outro abaixo
+    // do ponto pra não sobrepor o texto
     plugins: [{
-      id: 'endLabelsOcup',
+      id: 'pointLabelsOcup',
       afterDatasetsDraw(chart) {
         const {ctx} = chart;
         ctx.save();
-        ctx.font = '600 11px system-ui, sans-serif';
-        ctx.textAlign = 'left';
-        [[0, c25, data2025], [1, c26, data2026]].forEach(([di, color, data]) => {
-          const meta = chart.getDatasetMeta(di);
-          for (let i = data.length - 1; i >= 0; i--) {
-            if (data[i] != null && meta.data[i]) {
-              ctx.fillStyle = color;
-              ctx.fillText(fmtPct(data[i]), meta.data[i].x + 8, meta.data[i].y + 4);
-              break;
-            }
+        ctx.font = '600 10px system-ui, sans-serif';
+        ctx.textAlign = 'center';
+        const meta25 = chart.getDatasetMeta(0), meta26 = chart.getDatasetMeta(1);
+        const minGap = 12;
+        labels.forEach((_, i) => {
+          const p25 = data2025[i] != null && meta25.data[i] ? meta25.data[i] : null;
+          const p26 = data2026[i] != null && meta26.data[i] ? meta26.data[i] : null;
+          if (!p25 && !p26) return;
+          let y25 = p25 ? p25.y - 8 : null;
+          let y26 = p26 ? p26.y - 8 : null;
+          if (p25 && p26 && Math.abs(y25 - y26) < minGap) {
+            if (p25.y <= p26.y) { y25 = p25.y - 8; y26 = p26.y + 14; }
+            else { y26 = p26.y - 8; y25 = p25.y + 14; }
           }
+          if (p25) { ctx.fillStyle = c25; ctx.fillText(fmtPct(data2025[i]), p25.x, y25); }
+          if (p26) { ctx.fillStyle = c26; ctx.fillText(fmtPct(data2026[i]), p26.x, y26); }
         });
         ctx.restore();
       },
